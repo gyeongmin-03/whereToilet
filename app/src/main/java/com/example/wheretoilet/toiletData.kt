@@ -4,7 +4,7 @@ data class toiletData(
     val num : Int, //번호 ..5226
     val division : String, //구분(간이, 개방, 공중, 이동)
     val name : String, //화장실명
-    val StreetAdd : String, //도로명주소
+    val streetAdd : String, //도로명주소
     val address : String, //지번주소
     val maleBigCount : String, //남성용-대변기수
     val maleSmCount : String, //남성용-소변기수

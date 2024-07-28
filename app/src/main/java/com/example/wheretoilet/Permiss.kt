@@ -78,6 +78,36 @@ fun checkAndRequestPermissions(
     launcher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
 ) {
 
+    permissIf(
+        context,
+        t = {
+            Log.d("test5", "권한이 이미 존재합니다.")
+            LocatePermiss.ok.value = true
+        },
+
+        f = {
+            val sharedPreferences = context.getSharedPreferences("MAIN", ComponentActivity.MODE_PRIVATE)
+            val firstRequest = sharedPreferences.getBoolean("FIRST_REQUEST", true)
+
+            /**첫 요청이거나, 한 번 명시적 거절 했을 경우**/
+            if(firstRequest || requestPermissionRationale){
+                launcher.launch(permissions)
+                sharedPreferences.edit().putBoolean("FIRST_REQUEST", false).apply()
+                Log.d("test5", "권한을 요청하였습니다.")
+            }
+            /**두 번 이상 거절했었던 경우**/
+            else{
+                val packageName = "com.example.wheretoilet"
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                intent.data = Uri.parse("package:$packageName")
+                context.startActivity(intent)
+                Toast.makeText(context, "권한 → 위치를 활성화 해주세요", Toast.LENGTH_LONG).show()
+            }
+        }
+    )
+}
+
+fun permissIf(context: Context, t : () -> Unit, f : () -> Unit = {}){
     /** 권한이 이미 있는 경우 **/
     if (permissions.all {
             ContextCompat.checkSelfPermission(
@@ -85,27 +115,10 @@ fun checkAndRequestPermissions(
                 it
             ) == PackageManager.PERMISSION_GRANTED
         }) {
-        Log.d("test5", "권한이 이미 존재합니다.")
-        LocatePermiss.ok.value = true
+        t.invoke()
     }
     /** 권한이 없는 경우 **/
     else {
-        val sharedPreferences = context.getSharedPreferences("MAIN", ComponentActivity.MODE_PRIVATE)
-        val firstRequest = sharedPreferences.getBoolean("FIRST_REQUEST", true)
-
-        /**첫 요청이거나, 한 번 명시적 거절 했을 경우**/
-        if(firstRequest || requestPermissionRationale){
-            launcher.launch(permissions)
-            sharedPreferences.edit().putBoolean("FIRST_REQUEST", false).apply()
-            Log.d("test5", "권한을 요청하였습니다.")
-        }
-        /**두 번 이상 거절했었던 경우**/
-        else{
-            val packageName = "com.example.wheretoilet"
-            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-            intent.data = Uri.parse("package:$packageName")
-            context.startActivity(intent)
-            Toast.makeText(context, "권한 → 위치를 활성화 해주세요", Toast.LENGTH_LONG).show()
-        }
+        f.invoke()
     }
 }
