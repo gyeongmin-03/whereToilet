@@ -23,13 +23,14 @@ val permissions = arrayOf(
     android.Manifest.permission.ACCESS_COARSE_LOCATION,
     android.Manifest.permission.ACCESS_FINE_LOCATION
 )
+lateinit var arr: List<toiletData>
 
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val arr = toiletArr(this.assets).processData()
+        arr = toiletArr(this.assets).processData()
 
 
         /*
@@ -54,7 +55,7 @@ class MainActivity : ComponentActivity() {
             WhereToiletTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     Box{
-                        BottomSheet(arr)
+                        BottomSheet()
 
                         val dialog = remember { LocatePermiss.dialog }
 
@@ -70,7 +71,7 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun GoogleMap(arr:  List<toiletData>) {
+fun GoogleMap() {
     val ok = remember { LocatePermiss.ok }
     val busan = LatLng(35.137922, 129.055628)
     val proper = MapProperties(
@@ -133,14 +134,14 @@ fun GoogleMap(arr:  List<toiletData>) {
         if(btnView.value == true){
             Button(onClick = {
                 currentLocate.value = LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude)
-                setMarkerArr(arr, currentLocate.value)
+                setMarkerArr( currentLocate.value)
 
             }){Text("이 지역에서 다시 검색")}
         }
     } // box
 }
 
-fun setMarkerArr(arr: List<toiletData>, currentLocate : LatLng){
+fun setMarkerArr(currentLocate : LatLng){
     clickMarker.markerArr.value = arr.filter{
         it.weedo >= currentLocate.latitude - 0.01 &&
                 it.weedo <= currentLocate.latitude + 0.01 &&
@@ -154,12 +155,12 @@ fun setMarkerArr(arr: List<toiletData>, currentLocate : LatLng){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BottomSheet(arr: List<toiletData>){
+fun BottomSheet(){
     val markerData = clickMarker.markerData.collectAsState()
     val markerArr = clickMarker.markerArr.collectAsState()
     val markerWindowView = clickMarker.markerWindowView.collectAsState()
     val busan = LatLng(35.137922, 129.055628)
-    setMarkerArr(arr, busan)
+    setMarkerArr(busan)
 
     BottomSheetScaffold(
         sheetContent = {
@@ -176,7 +177,7 @@ fun BottomSheet(arr: List<toiletData>){
             }
         }
     ) {
-        GoogleMap(arr)
+        GoogleMap()
     }
 }
 
