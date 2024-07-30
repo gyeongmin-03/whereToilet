@@ -10,10 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.example.wheretoilet.ui.theme.WhereToiletTheme
-import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
@@ -25,7 +23,6 @@ val permissions = arrayOf(
     android.Manifest.permission.ACCESS_COARSE_LOCATION,
     android.Manifest.permission.ACCESS_FINE_LOCATION
 )
-
 
 
 class MainActivity : ComponentActivity() {
@@ -86,16 +83,16 @@ fun GoogleMap(arr:  List<toiletData>) {
         position = CameraPosition.fromLatLngZoom(busan, 15f)
     }
     val btnView = remember{ mutableStateOf(false) } //Map이 변경되었는지
-    val refresh = remember{ mutableStateOf(false) } //refresh가능한 상태인지
     val currentLocate = remember{ mutableStateOf(busan) }   //현재 중심이 되는 위치
-    val markerView = remember{ mutableStateOf(false) } //마커가 보이는 상태 
+
 
     Box{
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             properties = proper,
-            uiSettings = uiSettings
+            uiSettings = uiSettings,
+            onMapClick = {clickMarker.markerWindowView.value = false}
         ) {
             if(currentCameraPositionState.isMoving == true){
                 btnView.value = false
@@ -109,17 +106,8 @@ fun GoogleMap(arr:  List<toiletData>) {
             }
             else { //currentCameraPositionState.isMoving == false
                 btnView.value = true
-                if(currentCameraPositionState.position.zoom < 13){
-                    //지도를 확대시켜주세요
-                    refresh.value = false
-                    markerView.value = false
-                }
-                else {
-                    //이 지역에서 다시 검색 버튼
-                    refresh.value = true
-                    markerView.value = true
-                }
             }
+
 
             arr.filter{
                 it.weedo >= currentLocate.value.latitude - 0.01 &&
@@ -127,12 +115,14 @@ fun GoogleMap(arr:  List<toiletData>) {
                         it.gyeongdo >= currentLocate.value.longitude - 0.01 &&
                         it.gyeongdo <= currentLocate.value.longitude + 0.01
             }.forEach {
+
                 Marker(
                     state = MarkerState(position = LatLng(it.weedo, it.gyeongdo)),
                     title = it.name,
                     onClick = {_->
-                        cilckMarker.markerData.value = it
-                        Log.d("마커대이터", cilckMarker.markerData.value.toString())
+                        clickMarker.markerData.value = it
+                        Log.d("마커대이터", clickMarker.markerData.value.toString())
+                        clickMarker.markerWindowView.value = true
                         false
                     }
                 )
@@ -140,19 +130,23 @@ fun GoogleMap(arr:  List<toiletData>) {
         } //google map
 
 
-
         if(btnView.value == true){
-            if(refresh.value == true){
-                Button(onClick = {
-                    currentLocate.value = LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude)
+            Button(onClick = {
+                currentLocate.value = LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude)
+                setMarkerArr(arr, currentLocate.value)
 
-                }){Text("이 지역에서 다시 검색")}
-            }
-            else {
-                Button(onClick = { cameraPositionState.move(CameraUpdateFactory.zoomTo(15f)) }){ Text("지도를 확대시켜주세요")}
-            }
+            }){Text("이 지역에서 다시 검색")}
         }
     } // box
+}
+
+fun setMarkerArr(arr: List<toiletData>, currentLocate : LatLng){
+    clickMarker.markerArr.value = arr.filter{
+        it.weedo >= currentLocate.latitude - 0.01 &&
+                it.weedo <= currentLocate.latitude + 0.01 &&
+                it.gyeongdo >= currentLocate.longitude - 0.01 &&
+                it.gyeongdo <= currentLocate.longitude + 0.01
+    }
 }
 
 
@@ -161,23 +155,24 @@ fun GoogleMap(arr:  List<toiletData>) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BottomSheet(arr: List<toiletData>){
-//    val b = rememberStandardBottomSheetState()
-//    val a = rememberBottomSheetScaffoldState(bottomSheetState = b)
-//    val markerData = remember { cilckMarker.markerData.value }
-    val markerData = cilckMarker.markerData.collectAsState()
-//    Log.d("마커대이터", markerData.toString())
+    val markerData = clickMarker.markerData.collectAsState()
+    val markerArr = clickMarker.markerArr.collectAsState()
+    val markerWindowView = clickMarker.markerWindowView.collectAsState()
+    val busan = LatLng(35.137922, 129.055628)
+    setMarkerArr(arr, busan)
 
     BottomSheetScaffold(
-//        scaffoldState = a,
         sheetContent = {
-            if(markerData.value != null){
+            if(markerWindowView.value){
                 Column {
                     Text(markerData.value?.name ?: "NULL")
                     Text(markerData.value?.openTimeDetail ?: "NULL")
                 }
             }
             else {
-                Text("null")
+                markerArr.value.forEach {
+                    Text(it.toString())
+                }
             }
         }
     ) {
@@ -191,7 +186,8 @@ object LocatePermiss{
     val dialog = mutableStateOf(true)
 }
 
-object cilckMarker{
-//    val markerData : MutableState<toiletData?> = mutableStateOf(null)
+object clickMarker{
     val markerData : MutableStateFlow<toiletData?> = MutableStateFlow(null)
+    val markerArr : MutableStateFlow<List<toiletData>> = MutableStateFlow(listOf<toiletData>())
+    val markerWindowView = MutableStateFlow(false)
 }
