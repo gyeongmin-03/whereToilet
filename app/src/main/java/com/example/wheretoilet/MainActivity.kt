@@ -4,14 +4,14 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.wheretoilet.ui.theme.WhereToiletTheme
 import com.google.android.gms.maps.model.CameraPosition
@@ -124,7 +124,6 @@ fun GoogleMap() {
                     title = it.name,
                     onClick = {_->
                         clickMarker.markerData.value = it
-                        Log.d("마커대이터", clickMarker.markerData.value.toString())
                         clickMarker.markerWindowView.value = true
                         false
                     }
@@ -165,24 +164,27 @@ fun BottomSheet(){
     val expanded = remember { mutableStateOf(false) }
     setMarkerArr(busan)
 
-    val b = rememberStandardBottomSheetState(
+    val sheetState = rememberStandardBottomSheetState(
         confirmValueChange = { newState ->
             expanded.value = newState == SheetValue.Expanded
             true
         }
     )
 
-    val a = rememberBottomSheetScaffoldState(b)
+    val bottomSheetState = rememberBottomSheetScaffoldState(sheetState)
 
 
     BottomSheetScaffold(
-        scaffoldState = a,
+        sheetPeekHeight = 150.dp, //150으로 할 시, 확장 자체가 안되는 문제 발생 TODO
+        scaffoldState = bottomSheetState,
         sheetContent = {
             if(markerWindowView.value){
                 if(markerData.value != null){
-                    Column {
+                    Column(
+                        modifier = Modifier.fillMaxHeight()
+                    ) {
                         val data = markerData.value!!
-                        if(expanded.value){ //펼치면 다른게 보이도록 만들거임 TODO
+                        if(expanded.value){
                             Text(data.name)
                             Text(data.division)
                             Text(data.streetAdd)
@@ -190,6 +192,8 @@ fun BottomSheet(){
                         }
                         else {
                             Text("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+                            Text(data.name)
+
                         }
                     }
                 }
@@ -203,6 +207,12 @@ fun BottomSheet(){
     ) {
         GoogleMap()
     }
+}
+
+
+@Composable
+fun maxHeight(): Dp {
+    return LocalConfiguration.current.screenHeightDp.dp
 }
 
 
