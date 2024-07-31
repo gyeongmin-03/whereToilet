@@ -11,6 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import com.example.wheretoilet.ui.theme.WhereToiletTheme
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -160,14 +162,36 @@ fun BottomSheet(){
     val markerArr = clickMarker.markerArr.collectAsState()
     val markerWindowView = clickMarker.markerWindowView.collectAsState()
     val busan = LatLng(35.137922, 129.055628)
+    val expanded = remember { mutableStateOf(false) }
     setMarkerArr(busan)
 
+    val b = rememberStandardBottomSheetState(
+        confirmValueChange = { newState ->
+            expanded.value = newState == SheetValue.Expanded
+            true
+        }
+    )
+
+    val a = rememberBottomSheetScaffoldState(b)
+
+
     BottomSheetScaffold(
+        scaffoldState = a,
         sheetContent = {
             if(markerWindowView.value){
-                Column {
-                    Text(markerData.value?.name ?: "NULL")
-                    Text(markerData.value?.openTimeDetail ?: "NULL")
+                if(markerData.value != null){
+                    Column {
+                        val data = markerData.value!!
+                        if(expanded.value){ //펼치면 다른게 보이도록 만들거임 TODO
+                            Text(data.name)
+                            Text(data.division)
+                            Text(data.streetAdd)
+                            Text(data.openTimeDetail)
+                        }
+                        else {
+                            Text("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+                        }
+                    }
                 }
             }
             else {
