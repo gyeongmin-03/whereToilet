@@ -4,16 +4,25 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.wheretoilet.ui.theme.WhereToiletTheme
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
@@ -73,7 +82,7 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun GoogleMap() {
+fun MyGoogleMap(clickedData : toiletData?) {
     val ok = remember { LocatePermiss.ok }
     val busan = LatLng(35.137922, 129.055628)
     val proper = MapProperties(
@@ -88,6 +97,16 @@ fun GoogleMap() {
     val btnView = remember{ mutableStateOf(false) } //Map이 변경되었는지
     val currentLocate = remember{ mutableStateOf(busan) }   //현재 중심이 되는 위치
 
+    LaunchedEffect(key1 = clickedData){ //TODO clickedData가 안 달라져서 발생하는 문제
+        if(clickedData == null) return@LaunchedEffect
+
+        cameraPositionState.animate(
+            update = CameraUpdateFactory.newLatLng(LatLng(clickedData.weedo, clickedData.gyeongdo)),
+            durationMs = 300
+        )
+
+    }
+
 
     Box{
         GoogleMap(
@@ -95,7 +114,10 @@ fun GoogleMap() {
             cameraPositionState = cameraPositionState,
             properties = proper,
             uiSettings = uiSettings,
-            onMapClick = {clickMarker.markerWindowView.value = false}
+            onMapClick = {
+                clickMarker.markerWindowView.value = false
+                /*TODO 마커를 클릭했다가, 맵을 클릭하고, 바텀시트의 card를 하나만을 터치하면, window가 다시 나타나지 않음(다른 card를 클릭했다가, 다른 card를 클릭하면 나타남)*/
+            }
         ) {
             if(currentCameraPositionState.isMoving == true){
                 btnView.value = false
@@ -118,9 +140,15 @@ fun GoogleMap() {
                         it.gyeongdo >= currentLocate.value.longitude - 0.01 &&
                         it.gyeongdo <= currentLocate.value.longitude + 0.01
             }.forEach {
+                val markerState = rememberMarkerState(position = LatLng(it.weedo, it.gyeongdo))
+
+                if(clickedData?.num == it.num){
+                    markerState.showInfoWindow()
+                }
+
 
                 Marker(
-                    state = MarkerState(position = LatLng(it.weedo, it.gyeongdo)),
+                    state = markerState,
                     title = it.name,
                     onClick = {_->
                         clickMarker.markerData.value = it
@@ -128,6 +156,7 @@ fun GoogleMap() {
                         false
                     }
                 )
+
             }
         } //google map
 
@@ -173,39 +202,63 @@ fun BottomSheet(){
 
     val bottomSheetState = rememberBottomSheetScaffoldState(sheetState)
 
+    val clickedCard : MutableState<toiletData?> = remember { mutableStateOf(null) }  //TODO 이게 안달라져서 발생하는 문제
+
 
     BottomSheetScaffold(
-        sheetPeekHeight = 150.dp, //150으로 할 시, 확장 자체가 안되는 문제 발생 TODO
+        sheetPeekHeight = 200.dp,
         scaffoldState = bottomSheetState,
         sheetContent = {
+
             if(markerWindowView.value){
                 if(markerData.value != null){
-                    Column(
-                        modifier = Modifier.fillMaxHeight()
-                    ) {
-                        val data = markerData.value!!
-                        if(expanded.value){
-                            Text(data.name)
-                            Text(data.division)
-                            Text(data.streetAdd)
-                            Text(data.openTimeDetail)
-                        }
-                        else {
-                            Text("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-                            Text(data.name)
 
+                    val data = markerData.value!!
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(horizontal = 10.dp)
+                    ) {
+                        data.apply {
+                            if(expanded.value){
+                                Text(name)
+                                Text(division)
+                                Text(streetAdd)
+                                Text(openTimeDetail)
+                            }
+                            else {
+                                Row {
+                                    Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+                                    Text(" ", fontSize = 16.sp)
+                                    Text(division, fontSize = 12.sp, color = Color.LightGray)
+                                }
+                                HorizontalDivider()
+                                Text(streetAdd, fontSize = 14.sp)
+                                HorizontalDivider()
+                                Row {
+                                    Text(openTime)
+                                    Text(" ", fontSize = 16.sp)
+                                    Text(openTimeDetail)
+                                }
+                            }
                         }
                     }
                 }
             }
             else {
-                markerArr.value.forEach {
-                    Text(it.toString())
+                LazyColumn{
+                    itemsIndexed(items = markerArr.value){_, item ->
+                        Card(onClick = { clickedCard.value = item }) {
+                            Text(item.name)
+                        }
+                        HorizontalDivider()
+                    }
                 }
             }
         }
     ) {
-        GoogleMap()
+        MyGoogleMap(clickedCard.value)
     }
 }
 
