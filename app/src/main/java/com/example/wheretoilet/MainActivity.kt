@@ -4,19 +4,15 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -82,7 +78,7 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun MyGoogleMap(clickedData : toiletData?) {
+fun MyGoogleMap(clickedData : toiletData?, forceRecenter: Boolean) {
     val ok = remember { LocatePermiss.ok }
     val busan = LatLng(35.137922, 129.055628)
     val proper = MapProperties(
@@ -97,7 +93,7 @@ fun MyGoogleMap(clickedData : toiletData?) {
     val btnView = remember{ mutableStateOf(false) } //Map이 변경되었는지
     val currentLocate = remember{ mutableStateOf(busan) }   //현재 중심이 되는 위치
 
-    LaunchedEffect(key1 = clickedData){ //TODO clickedData가 안 달라져서 발생하는 문제
+    LaunchedEffect(key1 = clickedData, key2 = forceRecenter){
         if(clickedData == null) return@LaunchedEffect
 
         cameraPositionState.animate(
@@ -107,7 +103,6 @@ fun MyGoogleMap(clickedData : toiletData?) {
 
     }
 
-
     Box{
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
@@ -116,7 +111,6 @@ fun MyGoogleMap(clickedData : toiletData?) {
             uiSettings = uiSettings,
             onMapClick = {
                 clickMarker.markerWindowView.value = false
-                /*TODO 마커를 클릭했다가, 맵을 클릭하고, 바텀시트의 card를 하나만을 터치하면, window가 다시 나타나지 않음(다른 card를 클릭했다가, 다른 card를 클릭하면 나타남)*/
             }
         ) {
             if(currentCameraPositionState.isMoving == true){
@@ -201,9 +195,9 @@ fun BottomSheet(){
     )
 
     val bottomSheetState = rememberBottomSheetScaffoldState(sheetState)
+    val forceRecenter = remember { mutableStateOf(false) }
 
     val clickedCard : MutableState<toiletData?> = remember { mutableStateOf(null) }  //TODO 이게 안달라져서 발생하는 문제
-
 
     BottomSheetScaffold(
         sheetPeekHeight = 200.dp,
@@ -249,7 +243,10 @@ fun BottomSheet(){
             else {
                 LazyColumn{
                     itemsIndexed(items = markerArr.value){_, item ->
-                        Card(onClick = { clickedCard.value = item }) {
+                        Card(onClick = {
+                            forceRecenter.value = !forceRecenter.value
+                            clickedCard.value = item
+                        }) {
                             Text(item.name)
                         }
                         HorizontalDivider()
@@ -258,10 +255,9 @@ fun BottomSheet(){
             }
         }
     ) {
-        MyGoogleMap(clickedCard.value)
+        MyGoogleMap(clickedCard.value, forceRecenter.value)
     }
 }
-
 
 @Composable
 fun maxHeight(): Dp {
