@@ -1,5 +1,6 @@
 package com.example.wheretoilet
 
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -17,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.example.wheretoilet.ui.theme.WhereToiletTheme
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -31,6 +33,7 @@ val permissions = arrayOf(
     android.Manifest.permission.ACCESS_FINE_LOCATION
 )
 lateinit var arr: List<toiletData>
+val busan = LatLng(35.137922, 129.055628)
 
 
 class MainActivity : ComponentActivity() {
@@ -55,8 +58,8 @@ class MainActivity : ComponentActivity() {
             }
         )
 
-
-
+        LocatePermiss.systemLocationEnalbe.value = isEnableLocationSystem(this)
+        Log.d("위치 설정", LocatePermiss.systemLocationEnalbe.value.toString())
 
         setContent {
             WhereToiletTheme {
@@ -80,7 +83,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyGoogleMap(clickedData : toiletData?, forceRecenter: Boolean) {
     val ok = remember { LocatePermiss.ok }
-    val busan = LatLng(35.137922, 129.055628)
     val proper = MapProperties(
         minZoomPreference = 10f,
         isMyLocationEnabled = ok.value
@@ -116,7 +118,7 @@ fun MyGoogleMap(clickedData : toiletData?, forceRecenter: Boolean) {
             if(currentCameraPositionState.isMoving == true){
                 btnView.value = false
 
-                if (!LocatePermiss.ok.value){
+                if (LocatePermiss.ok.value == false){
                     permissIf(LocalContext.current, {
                         LocatePermiss.ok.value = true
                     })
@@ -180,10 +182,11 @@ fun setMarkerArr(currentLocate : LatLng){
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BottomSheet(){
+    val context = LocalContext.current
+
     val markerData = clickMarker.markerData.collectAsState()
     val markerArr = clickMarker.markerArr.collectAsState()
     val markerWindowView = clickMarker.markerWindowView.collectAsState()
-    val busan = LatLng(35.137922, 129.055628)
     val expanded = remember { mutableStateOf(false) }
     setMarkerArr(busan)
 
@@ -197,7 +200,11 @@ fun BottomSheet(){
     val bottomSheetState = rememberBottomSheetScaffoldState(sheetState)
     val forceRecenter = remember { mutableStateOf(false) }
 
-    val clickedCard : MutableState<toiletData?> = remember { mutableStateOf(null) }  //TODO 이게 안달라져서 발생하는 문제
+    val clickedCard : MutableState<toiletData?> = remember { mutableStateOf(null) }
+
+    val systemLocationEnalbe = remember { LocatePermiss.systemLocationEnalbe } //TODO 현재 위치와의 거리 표기
+    val currentLocate : MutableState<LatLng?> = remember { mutableStateOf(null) }
+
 
     BottomSheetScaffold(
         sheetPeekHeight = 200.dp,
@@ -242,12 +249,40 @@ fun BottomSheet(){
             }
             else {
                 LazyColumn{
+                    item {
+                        Row{
+                            Text("거리 갱신")
+                            Button(onClick = {
+                                if(permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED } && systemLocationEnalbe.value){
+                                    currentLocate.value = getCurrentLocation(context)
+                                    Log.d("작동은 하니?4", (currentLocate.value != null).toString()) //false
+
+                                }
+                            }) {
+
+                            }
+                        }
+                    }
                     itemsIndexed(items = markerArr.value){_, item ->
                         Card(onClick = {
                             forceRecenter.value = !forceRecenter.value
                             clickedCard.value = item
                         }) {
-                            Text(item.name)
+                            Row{
+                                Text(item.name)
+                                Log.d("작동은 하니?1", (currentLocate.value != null).toString()) //false
+                                Log.d("작동은 하니?2",(systemLocationEnalbe.value).toString())
+                                Log.d("작동은 하니?3",(permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }).toString())
+
+
+                                if(currentLocate.value != null && systemLocationEnalbe.value && permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
+                                    Log.d("작동은 하니?", "작동은 하니?") //작동 안하는 중
+
+                                    val curLocate = currentLocate.value!!
+                                    Text("  ")
+                                    Text(getDistance(curLocate.latitude, curLocate.longitude, item.weedo, item.gyeongdo).toString())
+                                }
+                            }
                         }
                         HorizontalDivider()
                     }
@@ -268,6 +303,7 @@ fun maxHeight(): Dp {
 object LocatePermiss{
     val ok = mutableStateOf(false)
     val dialog = mutableStateOf(true)
+    val systemLocationEnalbe = mutableStateOf(false)
 }
 
 object clickMarker{
