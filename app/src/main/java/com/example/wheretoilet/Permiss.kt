@@ -17,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -150,29 +151,68 @@ fun isEnableLocationSystem(context: Context): Boolean {
     }
 
 }
-fun getCurrentLocation(context: Context) : LatLng? {
-    var currentLocate : LatLng? = null
 
+fun getCurrentLocation(context: Context, getLocateSuc: (LatLng) -> Unit, getLocateFail: () -> Unit, enableSysFail: () -> Unit, permissFail:() -> Unit, allFail : ()->Unit){
     val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
 
     val locationRequest = CurrentLocationRequest.Builder().build()
 
 
-    if (permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
+    if (permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED } && isEnableLocationSystem(context)){
         fusedLocationClient.getCurrentLocation(locationRequest, null)
-            .addOnSuccessListener {location ->
-                currentLocate = LatLng(location.latitude, location.longitude)
-                Log.d("현재 위치", "$currentLocate")
+            .addOnSuccessListener {
+                getLocateSuc(LatLng(it.latitude, it.longitude))
             }
             .addOnFailureListener{
-                currentLocate = null
+                getLocateFail()
             }
-    }else {
-        currentLocate = null
-    }
 
-    return currentLocate
+
+    }
+    else if(isEnableLocationSystem(context)){
+        enableSysFail()
+    }
+    else if(permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
+        permissFail()
+    }
+    else {
+        allFail()
+    }
 }
+
+
+fun getLocationZip(context: Context, currentLocate: MutableState<LatLng?>) = getCurrentLocation(context,
+    getLocateSuc = {
+        LocatePermiss.systemLocationEnalbe.value = true
+        LocatePermiss.ok.value = true
+        currentLocate.value = LatLng(it.latitude, it.latitude)
+    },
+    getLocateFail = {
+        LocatePermiss.systemLocationEnalbe.value = true
+        LocatePermiss.ok.value = true
+        currentLocate.value = null
+    },
+    enableSysFail = {
+        LocatePermiss.systemLocationEnalbe.value = false
+        LocatePermiss.ok.value = true
+        currentLocate.value = null
+
+    },
+    permissFail = {
+        LocatePermiss.systemLocationEnalbe.value = true
+        LocatePermiss.ok.value = false
+        currentLocate.value = null
+    },
+    allFail = {
+        LocatePermiss.systemLocationEnalbe.value = false
+        LocatePermiss.ok.value = false
+        currentLocate.value = null
+
+    }
+)
+
+
+
 
 
 fun getDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Int {

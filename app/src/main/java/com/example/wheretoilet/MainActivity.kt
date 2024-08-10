@@ -1,5 +1,6 @@
 package com.example.wheretoilet
 
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -25,6 +26,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlin.math.exp
 
 
 /** 요청할 권한 **/
@@ -40,7 +42,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        arr = toiletArr(this.assets).processData()
+        arr = toiletArr(this.assets).processData() //전체 데이터 초기화
 
 
         /*
@@ -49,6 +51,7 @@ class MainActivity : ComponentActivity() {
         */
         val requestPermissionRationale = shouldShowRequestPermissionRationale(android.Manifest.permission.ACCESS_COARSE_LOCATION)
 
+        //어플의 위치 권한이 존재하는 지 확인
         permissIf(
             this,
             t = {
@@ -58,7 +61,7 @@ class MainActivity : ComponentActivity() {
             }
         )
 
-        LocatePermiss.systemLocationEnalbe.value = isEnableLocationSystem(this)
+        LocatePermiss.systemLocationEnalbe.value = isEnableLocationSystem(this) //기기의 위치 설정으로 초기화
         Log.d("위치 설정", LocatePermiss.systemLocationEnalbe.value.toString())
 
         setContent {
@@ -82,20 +85,21 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MyGoogleMap(clickedData : toiletData?, forceRecenter: Boolean) {
-    val ok = remember { LocatePermiss.ok }
+    val ok = remember { LocatePermiss.ok } //어플의 위치 권한 설정 여부
+
     val proper = MapProperties(
         minZoomPreference = 10f,
         isMyLocationEnabled = ok.value
     )
-
     val uiSettings = MapUiSettings(myLocationButtonEnabled = ok.value)
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(busan, 15f)
     }
+    
     val btnView = remember{ mutableStateOf(false) } //Map이 변경되었는지
     val currentLocate = remember{ mutableStateOf(busan) }   //현재 중심이 되는 위치
 
-    LaunchedEffect(key1 = clickedData, key2 = forceRecenter){
+    LaunchedEffect(key1 = clickedData, key2 = forceRecenter){ //clickedData 혹은 forceRecenter가 변경되면 비동기 실행
         if(clickedData == null) return@LaunchedEffect
 
         cameraPositionState.animate(
@@ -117,13 +121,6 @@ fun MyGoogleMap(clickedData : toiletData?, forceRecenter: Boolean) {
         ) {
             if(currentCameraPositionState.isMoving == true){
                 btnView.value = false
-
-                if (LocatePermiss.ok.value == false){
-                    permissIf(LocalContext.current, {
-                        LocatePermiss.ok.value = true
-                    })
-                }
-
             }
             else { //currentCameraPositionState.isMoving == false
                 btnView.value = true
@@ -177,6 +174,38 @@ fun setMarkerArr(currentLocate : LatLng){
 }
 
 
+@Composable
+fun DetailPlace(data : toiletData, expanded : MutableState<Boolean>){
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .padding(horizontal = 10.dp)
+    ) {
+        data.apply {
+            if(expanded.value){
+                Text(name)
+                Text(division)
+                Text(streetAdd)
+                Text(openTimeDetail)
+            }
+            else {
+                Row {
+                    Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+                    Text(" ", fontSize = 16.sp)
+                    Text(division, fontSize = 12.sp, color = Color.LightGray)
+                }
+                HorizontalDivider()
+                Text(streetAdd, fontSize = 14.sp)
+                HorizontalDivider()
+                Row {
+                    Text(openTime)
+                    Text(" ", fontSize = 16.sp)
+                    Text(openTimeDetail)
+                }
+            }
+        }
+    }
+}
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -187,8 +216,9 @@ fun BottomSheet(){
     val markerData = clickMarker.markerData.collectAsState()
     val markerArr = clickMarker.markerArr.collectAsState()
     val markerWindowView = clickMarker.markerWindowView.collectAsState()
-    val expanded = remember { mutableStateOf(false) }
     setMarkerArr(busan)
+
+    val expanded = remember { mutableStateOf(false) } //바텀시트가 완전히 확장된 상태인지 여부
 
     val sheetState = rememberStandardBottomSheetState(
         confirmValueChange = { newState ->
@@ -196,14 +226,17 @@ fun BottomSheet(){
             true
         }
     )
-
     val bottomSheetState = rememberBottomSheetScaffoldState(sheetState)
-    val forceRecenter = remember { mutableStateOf(false) }
+    val forceRecenter = remember { mutableStateOf(false) } //card 클릭 이벤트 강제 실행을 위함
 
-    val clickedCard : MutableState<toiletData?> = remember { mutableStateOf(null) }
+    val clickedCard : MutableState<toiletData?> = remember { mutableStateOf(null) } //클릭된 card
 
-    val systemLocationEnalbe = remember { LocatePermiss.systemLocationEnalbe } //TODO 현재 위치와의 거리 표기
-    val currentLocate : MutableState<LatLng?> = remember { mutableStateOf(null) }
+    val currentLocate : MutableState<LatLng?> = remember { mutableStateOf(null) } //현재 위치
+    getLocationZip(context, currentLocate)
+
+    val systemLocationEnalbe = remember { LocatePermiss.systemLocationEnalbe } //기기의 위치 설정 여부
+
+
 
 
     BottomSheetScaffold(
@@ -213,86 +246,62 @@ fun BottomSheet(){
 
             if(markerWindowView.value){
                 if(markerData.value != null){
-
                     val data = markerData.value!!
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .padding(horizontal = 10.dp)
-                    ) {
-                        data.apply {
-                            if(expanded.value){
-                                Text(name)
-                                Text(division)
-                                Text(streetAdd)
-                                Text(openTimeDetail)
-                            }
-                            else {
-                                Row {
-                                    Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
-                                    Text(" ", fontSize = 16.sp)
-                                    Text(division, fontSize = 12.sp, color = Color.LightGray)
-                                }
-                                HorizontalDivider()
-                                Text(streetAdd, fontSize = 14.sp)
-                                HorizontalDivider()
-                                Row {
-                                    Text(openTime)
-                                    Text(" ", fontSize = 16.sp)
-                                    Text(openTimeDetail)
-                                }
-                            }
-                        }
-                    }
+                    DetailPlace(data, expanded)
                 }
             }
             else {
-                LazyColumn{
-                    item {
-                        Row{
-                            Text("거리 갱신")
-                            Button(onClick = {
-                                if(permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED } && systemLocationEnalbe.value){
-                                    currentLocate.value = getCurrentLocation(context)
-                                    Log.d("작동은 하니?4", (currentLocate.value != null).toString()) //false
-
-                                }
-                            }) {
-
-                            }
-                        }
-                    }
-                    itemsIndexed(items = markerArr.value){_, item ->
-                        Card(onClick = {
-                            forceRecenter.value = !forceRecenter.value
-                            clickedCard.value = item
-                        }) {
-                            Row{
-                                Text(item.name)
-                                Log.d("작동은 하니?1", (currentLocate.value != null).toString()) //false
-                                Log.d("작동은 하니?2",(systemLocationEnalbe.value).toString())
-                                Log.d("작동은 하니?3",(permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }).toString())
-
-
-                                if(currentLocate.value != null && systemLocationEnalbe.value && permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
-                                    Log.d("작동은 하니?", "작동은 하니?") //작동 안하는 중
-
-                                    val curLocate = currentLocate.value!!
-                                    Text("  ")
-                                    Text(getDistance(curLocate.latitude, curLocate.longitude, item.weedo, item.gyeongdo).toString())
-                                }
-                            }
-                        }
-                        HorizontalDivider()
-                    }
-                }
+                PlaceList(context, currentLocate, markerArr, forceRecenter, clickedCard, systemLocationEnalbe)
             }
         }
     ) {
         MyGoogleMap(clickedCard.value, forceRecenter.value)
     }
 }
+
+
+
+@Composable
+fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, markerArr : State<List<toiletData>>, forceRecenter : MutableState<Boolean>, clickedCard: MutableState<toiletData?>, systemLocationEnalbe : MutableState<Boolean>){
+    LazyColumn{
+        item {
+            Row{
+                Text("거리 갱신")
+                Button(onClick = {
+                    getLocationZip(context, currentLocate)
+                    Log.d("작동은 하니?4", (currentLocate.value != null).toString()) //false
+
+                }) {
+                }
+            }
+        }
+        itemsIndexed(items = markerArr.value){_, item ->
+            Card(onClick = {
+                forceRecenter.value = !forceRecenter.value
+                clickedCard.value = item
+            }) {
+                Row{
+                    Text(item.name)
+                    Log.d("작동은 하니?1", (currentLocate.value != null).toString()) //false
+                    Log.d("작동은 하니?2",(systemLocationEnalbe.value).toString())
+                    Log.d("작동은 하니?3",(permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }).toString())
+
+
+                    if(currentLocate.value != null && systemLocationEnalbe.value && permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
+                        Log.d("작동은 하니?", "작동은 하니?") //작동 안하는 중
+
+                        val curLocate = currentLocate.value!!
+                        Text("  ")
+                        Text(getDistance(curLocate.latitude, curLocate.longitude, item.weedo, item.gyeongdo).toString())
+                    }
+                }
+            }
+            HorizontalDivider()
+        }
+    }
+}
+
+
 
 @Composable
 fun maxHeight(): Dp {
@@ -301,13 +310,13 @@ fun maxHeight(): Dp {
 
 
 object LocatePermiss{
-    val ok = mutableStateOf(false)
-    val dialog = mutableStateOf(true)
-    val systemLocationEnalbe = mutableStateOf(false)
+    val ok = mutableStateOf(false) //어플의 위치 권한 설정 여부
+    val dialog = mutableStateOf(true)   //다이얼로그 표시 여부
+    val systemLocationEnalbe = mutableStateOf(false) //기기의 위치 설정 여부
 }
 
 object clickMarker{
-    val markerData : MutableStateFlow<toiletData?> = MutableStateFlow(null)
-    val markerArr : MutableStateFlow<List<toiletData>> = MutableStateFlow(listOf<toiletData>())
-    val markerWindowView = MutableStateFlow(false)
+    val markerData : MutableStateFlow<toiletData?> = MutableStateFlow(null) //마커의 데이터
+    val markerArr : MutableStateFlow<List<toiletData>> = MutableStateFlow(listOf<toiletData>()) //표시되는 마커 arr
+    val markerWindowView = MutableStateFlow(false)  //마커의 윈도우를 보일것인가
 }
