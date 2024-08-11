@@ -278,7 +278,6 @@ fun DetailPlace(data : toiletData, expanded : MutableState<Boolean>, context: Co
     }
 }
 
-
 @Composable
 fun DistanceReButton(context: Context, currentLocate: MutableState<LatLng?>){
     Row{
