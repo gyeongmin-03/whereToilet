@@ -36,7 +36,7 @@ val permissions = arrayOf(
 )
 lateinit var arr: List<toiletData>
 val busan = LatLng(35.137922, 129.055628)
-
+val bottomSheetModifier = Modifier.fillMaxHeight().padding(horizontal = 10.dp)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -174,40 +174,6 @@ fun setMarkerArr(currentLocate : LatLng){
 }
 
 
-@Composable
-fun DetailPlace(data : toiletData, expanded : MutableState<Boolean>){
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .padding(horizontal = 10.dp)
-    ) {
-        data.apply {
-            if(expanded.value){
-                Text(name)
-                Text(division)
-                Text(streetAdd)
-                Text(openTimeDetail)
-            }
-            else {
-                Row {
-                    Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
-                    Text(" ", fontSize = 16.sp)
-                    Text(division, fontSize = 12.sp, color = Color.LightGray)
-                }
-                HorizontalDivider()
-                Text(streetAdd, fontSize = 14.sp)
-                HorizontalDivider()
-                Row {
-                    Text(openTime)
-                    Text(" ", fontSize = 16.sp)
-                    Text(openTimeDetail)
-                }
-            }
-        }
-    }
-}
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BottomSheet(){
@@ -247,7 +213,8 @@ fun BottomSheet(){
             if(markerWindowView.value){
                 if(markerData.value != null){
                     val data = markerData.value!!
-                    DetailPlace(data, expanded)
+
+                    DetailPlace(data, expanded, context, currentLocate)
                 }
             }
             else {
@@ -261,19 +228,77 @@ fun BottomSheet(){
 
 
 
-@Composable
-fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, markerArr : State<List<toiletData>>, forceRecenter : MutableState<Boolean>, clickedCard: MutableState<toiletData?>, systemLocationEnalbe : MutableState<Boolean>){
-    LazyColumn{
-        item {
-            Row{
-                Text("거리 갱신")
-                Button(onClick = {
-                    getLocationZip(context, currentLocate)
-                    Log.d("작동은 하니?4", (currentLocate.value != null).toString()) //false
 
-                }) {
+@Composable
+fun DetailPlace(data : toiletData, expanded : MutableState<Boolean>, context: Context, currentLocate: MutableState<LatLng?>){
+    Column(
+        modifier = bottomSheetModifier
+    ) {
+        DistanceReButton(context, currentLocate)
+
+        data.apply {
+            if(expanded.value){
+                Row{
+                    Text(name)
+
+                    if(currentLocate.value != null){
+
+                        val curLocate = currentLocate.value!!
+                        Text("  ")
+                        Text(getDistance(curLocate.latitude, curLocate.longitude, data.weedo, data.gyeongdo).toString())
+                    }
+                }
+                Text(division)
+                Text(streetAdd)
+                Text(openTimeDetail)
+            }
+            else {
+                Row {
+                    Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+                    Text(" ", fontSize = 16.sp)
+                    Text(division, fontSize = 12.sp, color = Color.LightGray)
+
+                    if(currentLocate.value != null){
+
+                        val curLocate = currentLocate.value!!
+                        Text("  ")
+                        Text(getDistance(curLocate.latitude, curLocate.longitude, data.weedo, data.gyeongdo).toString())
+                    }
+                }
+                HorizontalDivider()
+                Text(streetAdd, fontSize = 14.sp)
+                HorizontalDivider()
+                Row {
+                    Text(openTime)
+                    Text(" ", fontSize = 16.sp)
+                    Text(openTimeDetail)
                 }
             }
+        }
+    }
+}
+
+
+@Composable
+fun DistanceReButton(context: Context, currentLocate: MutableState<LatLng?>){
+    Row{
+        Text("거리 갱신")
+        Button(onClick = {
+            getLocationZip(context, currentLocate)
+            Log.d("작동은 하니?4", (currentLocate.value != null).toString()) //false
+
+        }) {
+        }
+    }
+}
+
+@Composable
+fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, markerArr : State<List<toiletData>>, forceRecenter : MutableState<Boolean>, clickedCard: MutableState<toiletData?>, systemLocationEnalbe : MutableState<Boolean>){
+    LazyColumn(
+        modifier = bottomSheetModifier
+    ){
+        item {
+            DistanceReButton(context, currentLocate)
         }
         itemsIndexed(items = markerArr.value){_, item ->
             Card(onClick = {
