@@ -2,11 +2,9 @@ package com.example.wheretoilet
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.text.Layout.Alignment
 import android.util.Log
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -89,33 +88,71 @@ fun DetailPlace(data : toiletData, expanded : MutableState<Boolean>, context: Co
     ) {
         DistanceReButton(context, currentLocate)
 
+
         data.apply {
             if(expanded.value){
-                Row{
-                    Text(name)
-
-                    if(currentLocate.value != null){
-
-                        val curLocate = currentLocate.value!!
-                        Text("  ")
-                        Text(getDistance(curLocate.latitude, curLocate.longitude, data.weedo, data.gyeongdo).toString())
-                    }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ){
+                    Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+                    Text(division, fontSize = 12.sp, color = Color.LightGray, modifier = Modifier.padding(horizontal = 5.dp))
                 }
-                Text(division)
-                Text(streetAdd)
-                Text(openTimeDetail)
+                HorizontalDivider()
+                Text(streetAdd, fontSize = 14.sp)
+
+                HorizontalDivider()
+                Row {
+                    Text(openTime)
+                    Text(" ", fontSize = 16.sp)
+                    Text(openTimeDetail)
+                }
+
+                HorizontalDivider()
+                Text(manageName)
+
+                HorizontalDivider()
+                Text(phoneNum)
+
+                HorizontalDivider()
+                Text(possession)
+
+                HorizontalDivider()
+                Text(emBell.toString())
+
+                HorizontalDivider()
+                Text(emBellLoc)
+
+                HorizontalDivider()
+                Text(cctv.toString())
+
+                HorizontalDivider()
+                Text(diaperChange.toString())
+
+                HorizontalDivider()
+                Text(diaperChangeLoc)
+
+
+
+
+
             }
             else {
-                Row {
-                    Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
-                    Text(" ", fontSize = 16.sp)
-                    Text(division, fontSize = 12.sp, color = Color.LightGray)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.Start
+                    ){
+                        Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+                        Text(division, fontSize = 12.sp, color = Color.LightGray, modifier = Modifier.padding(horizontal = 5.dp))
+                    }
+
 
                     if(currentLocate.value != null){
-
                         val curLocate = currentLocate.value!!
-                        Text("  ")
-                        Text(getDistance(curLocate.latitude, curLocate.longitude, data.weedo, data.gyeongdo).toString())
+                        Text(getDistance(curLocate.latitude, curLocate.longitude, data.weedo, data.gyeongdo).toString()+" m")
                     }
                 }
                 HorizontalDivider()
@@ -145,27 +182,25 @@ fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, markerArr 
                 onClick = {
                     forceRecenter.value = !forceRecenter.value
                     clickedCard.value = item },
-                modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
                 shape = RoundedCornerShape(0.dp)
 
             ) {
-                Row{
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ){
                     Text(item.name)
-                    Log.d("작동은 하니?1", (currentLocate.value != null).toString())
-                    Log.d("작동은 하니?2",(systemLocationEnalbe.value).toString())
-                    Log.d("작동은 하니?3",(permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }).toString())
-
 
                     if(currentLocate.value != null && systemLocationEnalbe.value && permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
-                        Log.d("작동은 하니?", "작동은 하니?")
-
                         val curLocate = currentLocate.value!!
-                        Text("  ")
-                        Text(getDistance(curLocate.latitude, curLocate.longitude, item.weedo, item.gyeongdo).toString())
+                        Text(getDistance(curLocate.latitude, curLocate.longitude, item.weedo, item.gyeongdo).toString()+" m")
                     }
                 }
             }
-            HorizontalDivider()
+            HorizontalDivider(modifier = Modifier.padding(2.dp))
         }
     }
 }
@@ -174,13 +209,14 @@ fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, markerArr 
 
 @Composable
 fun DistanceReButton(context: Context, currentLocate: MutableState<LatLng?>){
-    Row{
-        Text("거리 갱신")
-        Button(onClick = {
+    Button(
+        onClick = {
             getLocationZip(context, currentLocate)
-            Log.d("작동은 하니?4", (currentLocate.value != null).toString()) //false
-
-        }) {
-        }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight(),
+    ) {
+        Text("거리 갱신", modifier = Modifier.padding(2.dp))
     }
 }

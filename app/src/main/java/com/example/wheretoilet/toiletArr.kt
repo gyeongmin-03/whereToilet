@@ -23,24 +23,14 @@ class toiletArr(assets : AssetManager) {
                     it[5],
                     it[6],
                     it[7],
-                    it[8],
-                    it[9],
+                    it[8].toDouble(),
+                    it[9].toDouble(),
                     it[10],
-                    it[11],
+                    if(it[11]=="Y") true else false,
                     it[12],
-                    it[13],
-                    it[14],
-                    it[15],
-                    it[16],
-                    it[17],
-                    it[18].toDouble(),
-                    it[19].toDouble(),
-                    it[20],
-                    if(it[21]=="Y") true else false,
-                    it[22],
-                    if(it[23]=="Y") true else false,
-                    if(it[24]=="Y") true else false,
-                    it[25]
+                    if(it[13]=="Y") true else false,
+                    if(it[14]=="Y") true else false,
+                    it[15]
                 ))
             } catch (e: NumberFormatException){
 
