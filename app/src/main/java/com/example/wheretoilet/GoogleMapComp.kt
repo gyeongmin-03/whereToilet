@@ -29,7 +29,7 @@ fun MyGoogleMap(clickedData : toiletData?, forceRecenter: Boolean) {
     }
 
     val btnView = remember{ mutableStateOf(false) } //Map이 변경되었는지
-    val currentLocate = remember{ mutableStateOf(busan) }   //현재 중심이 되는 위치
+    val currentCameraLocate = remember{ mutableStateOf(busan) }   //현재 카메라 위치
 
     LaunchedEffect(key1 = clickedData, key2 = forceRecenter){ //clickedData 혹은 forceRecenter가 변경되면 비동기 실행
         if(clickedData == null) return@LaunchedEffect
@@ -60,10 +60,10 @@ fun MyGoogleMap(clickedData : toiletData?, forceRecenter: Boolean) {
 
 
             arr.filter{
-                it.weedo >= currentLocate.value.latitude - 0.01 &&
-                        it.weedo <= currentLocate.value.latitude + 0.01 &&
-                        it.gyeongdo >= currentLocate.value.longitude - 0.01 &&
-                        it.gyeongdo <= currentLocate.value.longitude + 0.01
+                it.weedo >= currentCameraLocate.value.latitude - 0.01 &&
+                        it.weedo <= currentCameraLocate.value.latitude + 0.01 &&
+                        it.gyeongdo >= currentCameraLocate.value.longitude - 0.01 &&
+                        it.gyeongdo <= currentCameraLocate.value.longitude + 0.01
             }.forEach {
                 val markerState = rememberMarkerState(position = LatLng(it.weedo, it.gyeongdo))
 
@@ -88,8 +88,8 @@ fun MyGoogleMap(clickedData : toiletData?, forceRecenter: Boolean) {
 
         if(btnView.value == true){
             Button(onClick = {
-                currentLocate.value = LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude)
-                setMarkerArr( currentLocate.value)
+                currentCameraLocate.value = LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude)
+                setMarkerArr( currentCameraLocate.value)
 
             }){ Text("이 지역에서 다시 검색") }
         }
