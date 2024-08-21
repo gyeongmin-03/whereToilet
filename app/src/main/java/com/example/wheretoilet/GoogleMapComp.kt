@@ -1,24 +1,26 @@
 package com.example.wheretoilet
 
+import android.util.Log
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import org.apache.commons.collections.list.LazyList
 
 
 @Composable
-fun MyGoogleMap(clickedData : toiletData?, forceRecenter: Boolean) {
+fun MyGoogleMap(clickedData : toiletData?, forceRecenter: Boolean, currentLocate: MutableState<LatLng?>) {
     val ok = remember { LocatePermiss.ok } //어플의 위치 권한 설정 여부
-
+    val context = LocalContext.current
     val proper = MapProperties(
         minZoomPreference = 10f,
         isMyLocationEnabled = ok.value
@@ -38,8 +40,10 @@ fun MyGoogleMap(clickedData : toiletData?, forceRecenter: Boolean) {
             update = CameraUpdateFactory.newLatLng(LatLng(clickedData.weedo, clickedData.gyeongdo)),
             durationMs = 300
         )
-
     }
+
+
+    val markers = clickMarker.markerArr.collectAsState().value
 
     Box{
         GoogleMap(
@@ -58,40 +62,34 @@ fun MyGoogleMap(clickedData : toiletData?, forceRecenter: Boolean) {
                 btnView.value = true
             }
 
-
-            arr.filter{
-                it.weedo >= currentCameraLocate.value.latitude - 0.01 &&
-                        it.weedo <= currentCameraLocate.value.latitude + 0.01 &&
-                        it.gyeongdo >= currentCameraLocate.value.longitude - 0.01 &&
-                        it.gyeongdo <= currentCameraLocate.value.longitude + 0.01
-            }.forEach {
-                val markerState = rememberMarkerState(position = LatLng(it.weedo, it.gyeongdo))
-
-                if(clickedData?.num == it.num){
-                    markerState.showInfoWindow()
-                }
-
+            markers.forEach { markerData ->
+                val markerState = MarkerState(position = LatLng(markerData.weedo, markerData.gyeongdo))
 
                 Marker(
                     state = markerState,
-                    title = it.name,
-                    onClick = {_->
-                        clickMarker.markerData.value = it
+                    title = markerData.name,
+                    onClick = {
+                        clickMarker.markerData.value = markerData
                         clickMarker.markerWindowView.value = true
                         false
                     }
                 )
-
             }
+
+
+
         } //google map
 
 
         if(btnView.value == true){
-            Button(onClick = {
-                currentCameraLocate.value = LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude)
-                setMarkerArr( currentCameraLocate.value)
+            Column {
+                Button(onClick = {
+                    currentCameraLocate.value = LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude)
+                    setMarkerArr( currentCameraLocate.value )
+                }){ Text("이 지역에서 다시 검색") }
 
-            }){ Text("이 지역에서 다시 검색") }
+                DistanceReButton(context, currentLocate)
+            }
         }
     } // box
 }

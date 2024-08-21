@@ -24,10 +24,9 @@ import androidx.compose.ui.Alignment
 fun BottomSheet(){
     val context = LocalContext.current
 
-    val markerData = clickMarker.markerData.collectAsState()
-    val markerArr = clickMarker.markerArr.collectAsState()
-    val markerWindowView = clickMarker.markerWindowView.collectAsState()
-    setMarkerArr(busan)
+    val markerData = clickMarker.markerData.collectAsState().value
+    val markerArr = clickMarker.markerArr.collectAsState().value
+    val markerWindowView = clickMarker.markerWindowView.collectAsState().value
 
     val expanded = remember { mutableStateOf(false) } //바텀시트가 완전히 확장된 상태인지 여부
 
@@ -53,11 +52,9 @@ fun BottomSheet(){
         scaffoldState = bottomSheetState,
         sheetContent = {
 
-            if(markerWindowView.value){
-                if(markerData.value != null){
-                    val data = markerData.value!!
-
-                    DetailPlace(data, expanded, context, currentLocate)
+            if(markerWindowView){
+                if(markerData != null){
+                    DetailPlace(markerData, expanded, currentLocate)
                 }
             }
             else {
@@ -65,7 +62,7 @@ fun BottomSheet(){
             }
         }
     ) {
-        MyGoogleMap(clickedCard.value, forceRecenter.value)
+        MyGoogleMap(clickedCard.value, forceRecenter.value, currentLocate)
     }
 }
 
@@ -76,13 +73,10 @@ fun BottomSheet(){
 
 
 @Composable
-fun DetailPlace(data : toiletData, expanded : MutableState<Boolean>, context: Context, currentLocate: MutableState<LatLng?>){
+fun DetailPlace(data : toiletData, expanded : MutableState<Boolean>, currentLocate: MutableState<LatLng?>){
     Column(
         modifier = bottomSheetModifier
     ) {
-        DistanceReButton(context, currentLocate)
-
-
         data.apply {
             if(expanded.value){
                 Row(
@@ -173,14 +167,11 @@ fun pText(str : String, modifier : Modifier = Modifier){
 
 
 @Composable
-fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, markerArr : State<List<toiletData>>, forceRecenter : MutableState<Boolean>, clickedCard: MutableState<toiletData?>, systemLocationEnalbe : MutableState<Boolean>){
+fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, markerArr : List<toiletData>, forceRecenter : MutableState<Boolean>, clickedCard: MutableState<toiletData?>, systemLocationEnalbe : MutableState<Boolean>){
     LazyColumn(
         modifier = bottomSheetModifier
     ){
-        item {
-            DistanceReButton(context, currentLocate)
-        }
-        itemsIndexed(items = markerArr.value){_, item ->
+        itemsIndexed(items = markerArr){_, item ->
             Card(
                 onClick = {
                     forceRecenter.value = !forceRecenter.value
@@ -217,7 +208,6 @@ fun DistanceReButton(context: Context, currentLocate: MutableState<LatLng?>){
             getLocationZip(context, currentLocate)
         },
         modifier = Modifier
-            .fillMaxWidth()
             .wrapContentHeight(),
     ) {
         Text("거리 갱신", modifier = Modifier.padding(2.dp))
