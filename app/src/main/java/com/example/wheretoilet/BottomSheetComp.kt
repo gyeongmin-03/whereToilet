@@ -4,10 +4,12 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -16,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.model.LatLng
-import androidx.compose.ui.Alignment
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,7 +26,6 @@ fun BottomSheet(){
     val context = LocalContext.current
 
     val markerData = clickMarker.markerData.collectAsState().value
-    val markerArr = clickMarker.markerArr.collectAsState().value
     val markerWindowView = clickMarker.markerWindowView.collectAsState().value
 
     val expanded = remember { mutableStateOf(false) } //바텀시트가 완전히 확장된 상태인지 여부
@@ -37,14 +37,12 @@ fun BottomSheet(){
         }
     )
     val bottomSheetState = rememberBottomSheetScaffoldState(sheetState)
-    val forceRecenter = remember { mutableStateOf(false) } //card 클릭 이벤트 강제 실행을 위함
 
+    val forceRecenter = remember { mutableStateOf(false) } //card 클릭 이벤트 강제 실행을 위함
     val clickedCard : MutableState<toiletData?> = remember { mutableStateOf(null) } //클릭된 card
 
     val currentLocate : MutableState<LatLng?> = remember { mutableStateOf(null) } //현재 실제 위치
     getLocationZip(context, currentLocate)
-
-    val systemLocationEnalbe = remember { LocatePermiss.systemLocationEnalbe } //기기의 위치 설정 여부
 
 
     BottomSheetScaffold(
@@ -58,7 +56,7 @@ fun BottomSheet(){
                 }
             }
             else {
-                PlaceList(context, currentLocate, markerArr, forceRecenter, clickedCard, systemLocationEnalbe)
+                PlaceList(context, currentLocate, forceRecenter, clickedCard, expanded)
             }
         }
     ) {
@@ -83,8 +81,12 @@ fun DetailPlace(data : toiletData, expanded : MutableState<Boolean>, currentLoca
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ){
-                    Text(name, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.align(Alignment.Bottom).padding(vertical = 2.dp))
-                    Text(division, fontSize = 16.sp, color = Color.LightGray, modifier = Modifier.align(Alignment.Bottom).padding(horizontal = 5.dp, vertical = 5.dp))
+                    Text(name, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier
+                        .align(Alignment.Bottom)
+                        .padding(vertical = 2.dp))
+                    Text(division, fontSize = 16.sp, color = Color.LightGray, modifier = Modifier
+                        .align(Alignment.Bottom)
+                        .padding(horizontal = 5.dp, vertical = 5.dp))
                 }
 
                 HorizontalDivider()
@@ -130,8 +132,12 @@ fun DetailPlace(data : toiletData, expanded : MutableState<Boolean>, currentLoca
                     Row(
                         horizontalArrangement = Arrangement.Start
                     ){
-                        Text(name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.align(Alignment.Bottom).padding(vertical = 2.dp))
-                        Text(division, fontSize = 16.sp, color = Color.LightGray, modifier = Modifier.align(Alignment.Bottom).padding(horizontal = 5.dp, vertical = 5.dp))
+                        Text(name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier
+                            .align(Alignment.Bottom)
+                            .padding(vertical = 2.dp))
+                        Text(division, fontSize = 16.sp, color = Color.LightGray, modifier = Modifier
+                            .align(Alignment.Bottom)
+                            .padding(horizontal = 5.dp, vertical = 5.dp))
                     }
                 }
 
@@ -167,36 +173,71 @@ fun pText(str : String, modifier : Modifier = Modifier){
 
 
 @Composable
-fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, markerArr : List<toiletData>, forceRecenter : MutableState<Boolean>, clickedCard: MutableState<toiletData?>, systemLocationEnalbe : MutableState<Boolean>){
-    LazyColumn(
-        modifier = bottomSheetModifier
-    ){
-        itemsIndexed(items = markerArr){_, item ->
-            Card(
-                onClick = {
-                    forceRecenter.value = !forceRecenter.value
-                    clickedCard.value = item },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight(),
-                shape = RoundedCornerShape(0.dp)
+fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, forceRecenter : MutableState<Boolean>, clickedCard: MutableState<toiletData?>, expanded: MutableState<Boolean>){
+    val systemLocationEnalbe = remember { LocatePermiss.systemLocationEnalbe } //기기의 위치 설정 여부
+    val markerArr = clickMarker.markerArr.collectAsState().value
 
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ){
-                    Text(item.name)
+    if(expanded.value){
+        LazyColumn(
+            modifier = bottomSheetModifier
+        ){
+            itemsIndexed(items = markerArr){_, item ->
+                Card(
+                    onClick = {
+                        forceRecenter.value = !forceRecenter.value
+                        clickedCard.value = item },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    shape = RoundedCornerShape(0.dp)
 
-                    if(currentLocate.value != null && systemLocationEnalbe.value && permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
-                        val curLocate = currentLocate.value!!
-                        Text(getDistance(curLocate.latitude, curLocate.longitude, item.weedo, item.gyeongdo).toString()+" m")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ){
+                        Text(item.name)
+
+                        if(currentLocate.value != null && systemLocationEnalbe.value && permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
+                            val curLocate = currentLocate.value!!
+                            Text(getDistance(curLocate.latitude, curLocate.longitude, item.weedo, item.gyeongdo).toString()+" m")
+                        }
+                    }
+                } //Card
+
+                HorizontalDivider(modifier = Modifier.padding(2.dp))
+            } //itemsIndexed
+        } //LazyColumn
+    }//if(expended.value)
+    else {
+        LazyRow(
+            modifier = bottomSheetModifier
+
+        ) {
+            itemsIndexed(items = markerArr){_, item ->
+                Card(
+                    onClick = {
+                        forceRecenter.value = !forceRecenter.value
+                        clickedCard.value = item },
+                    modifier = Modifier
+                        .height(150.dp)
+                        .width(150.dp),
+                    shape = RoundedCornerShape(0.dp)
+                ) {
+                    Column {
+                        Text(item.name)
+
+                        if(currentLocate.value != null && systemLocationEnalbe.value && permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
+                            val curLocate = currentLocate.value!!
+                            Text(getDistance(curLocate.latitude, curLocate.longitude, item.weedo, item.gyeongdo).toString()+" m")
+                        }
                     }
                 }
-            }
-            HorizontalDivider(modifier = Modifier.padding(2.dp))
-        }
-    }
+            } //itemsIndexed
+        } //LazyRow
+    } //else
 }
 
 
