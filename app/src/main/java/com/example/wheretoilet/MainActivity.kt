@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.wheretoilet.ui.theme.WhereToiletTheme
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.MarkerState
 import kotlinx.coroutines.flow.MutableStateFlow
 
 
@@ -29,7 +28,6 @@ val permissions = arrayOf(
     android.Manifest.permission.ACCESS_FINE_LOCATION
 )
 lateinit var arr: List<toiletData>
-lateinit var markerStateArr : MutableMap<Int, MarkerState>
 val busan = LatLng(35.137922, 129.055628)
 val bottomSheetModifier = Modifier.fillMaxHeight().padding(horizontal = 10.dp)
 
@@ -57,8 +55,6 @@ class MainActivity : ComponentActivity() {
 
         arr = toiletArr(this.assets).processData() //전체 데이터 초기화
         setMarkerArr(busan)
-
-        markerStateArr = arr.associate { it.num to MarkerState(position = LatLng(it.weedo, it.gyeongdo)) }.toMutableMap()
 
         /*
         - 사용자가 권한 요청을 명시적으로 거부한 경우 true를 반환한다.
