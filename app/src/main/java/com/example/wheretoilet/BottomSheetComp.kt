@@ -2,10 +2,9 @@ package com.example.wheretoilet
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.util.Log
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -45,6 +44,8 @@ fun BottomSheet(){
     getLocationZip(context, currentLocate)
 
 
+
+    val lazyListState = rememberLazyListState()
     BottomSheetScaffold(
         sheetPeekHeight = 200.dp,
         scaffoldState = bottomSheetState,
@@ -56,7 +57,14 @@ fun BottomSheet(){
                 }
             }
             else {
-                PlaceList(context, currentLocate, forceRecenter, clickedCard, expanded)
+                PlaceList(
+                    context,
+                    currentLocate,
+                    forceRecenter,
+                    clickedCard,
+                    expanded,
+                    lazyListState
+                )
             }
         }
     ) {
@@ -173,13 +181,23 @@ fun pText(str : String, modifier : Modifier = Modifier){
 
 
 @Composable
-fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, forceRecenter : MutableState<Boolean>, clickedCard: MutableState<toiletData?>, expanded: MutableState<Boolean>){
-    val systemLocationEnalbe = remember { LocatePermiss.systemLocationEnalbe } //기기의 위치 설정 여부
+fun PlaceList(
+    context: Context,
+    currentLocate: MutableState<LatLng?>,
+    forceRecenter: MutableState<Boolean>,
+    clickedCard: MutableState<toiletData?>,
+    expanded: MutableState<Boolean>,
+    lazyListState : LazyListState
+){
+    val systemLocationEnable = remember { LocatePermiss.systemLocationEnalbe } //기기의 위치 설정 여부
     val markerArr = clickMarker.markerArr.collectAsState().value
+    Log.d("PlaceList 리컴지블", "PlaceList 리컴지블")
 
     if(expanded.value){
         LazyColumn(
-            modifier = bottomSheetModifier
+            modifier = bottomSheetModifier,
+            state = lazyListState
+
         ){
             itemsIndexed(items = markerArr){_, item ->
                 Card(
@@ -200,7 +218,7 @@ fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, forceRecen
                     ){
                         Text(item.name)
 
-                        if(currentLocate.value != null && systemLocationEnalbe.value && permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
+                        if(currentLocate.value != null && systemLocationEnable.value && permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
                             val curLocate = currentLocate.value!!
                             Text(getDistance(curLocate.latitude, curLocate.longitude, item.weedo, item.gyeongdo).toString()+" m")
                         }
@@ -213,7 +231,8 @@ fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, forceRecen
     }//if(expended.value)
     else {
         LazyRow(
-            modifier = bottomSheetModifier
+            modifier = bottomSheetModifier,
+            state = lazyListState
 
         ) {
             itemsIndexed(items = markerArr){_, item ->
@@ -223,13 +242,16 @@ fun PlaceList(context: Context, currentLocate: MutableState<LatLng?>, forceRecen
                         clickedCard.value = item },
                     modifier = Modifier
                         .height(150.dp)
-                        .width(150.dp),
-                    shape = RoundedCornerShape(0.dp)
+                        .width(150.dp)
+                        .padding(10.dp),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Column {
-                        Text(item.name)
+                    Column(
+                        modifier = Modifier.padding(10.dp)
+                    ) {
+                        Text(item.name, softWrap = true)
 
-                        if(currentLocate.value != null && systemLocationEnalbe.value && permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
+                        if(currentLocate.value != null && systemLocationEnable.value && permissions.all{ ContextCompat.checkSelfPermission( context, it ) == PackageManager.PERMISSION_GRANTED }){
                             val curLocate = currentLocate.value!!
                             Text(getDistance(curLocate.latitude, curLocate.longitude, item.weedo, item.gyeongdo).toString()+" m")
                         }
